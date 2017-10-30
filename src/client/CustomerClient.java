@@ -6,8 +6,8 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 
-import common.BankServerInterface;
 import domain.BranchID;
+import server.BankServerInterface;
 
 public class CustomerClient
 {

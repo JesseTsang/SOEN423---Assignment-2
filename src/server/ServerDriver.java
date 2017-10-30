@@ -1,6 +1,5 @@
-package servers;
+package server;
 
-import common.BankServerImpl;
 import domain.BranchID;
 import domain.EditRecordFields;
 

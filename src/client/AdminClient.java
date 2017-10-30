@@ -6,9 +6,10 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.HashMap;
-import common.BankServerInterface;
+
 import domain.BranchID;
 import domain.EditRecordFields;
+import server.BankServerInterface;
 
 public class AdminClient
 {
