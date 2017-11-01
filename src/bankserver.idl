@@ -1,10 +1,16 @@
+//Generated files will be inside "common" package.
 module common
 {
 	enum BranchID {BC, MB, NB, QC};
 	enum EditRecordFields {address, phone, branch};
+	
+	//Interface for the Banking Server
 	interface BankServerInterface
 	{	
+		//Unknown client exception
 		exception invalid_client {};
+		
+		//Invalid method invocation
 		exception invalid_bankOperation {};
 		
 		typedef sequence<string> accounts;
@@ -18,7 +24,7 @@ module common
 		void deposit(in string customerID, in float amount) raises (invalid_client, invalid_bankOperation);
 		void withdraw(in string customerID, in float amount) raises (invalid_client, invalid_bankOperation);
 		void getBalance(in string customerID) raises (invalid_client);
-		void transferFund(in string sourceID, in float amount, in string destID) raises (invalid_client, invalid_bankOperation);
+		boolean transferFund(in string sourceID, in float amount, in string destID) raises (invalid_client, invalid_bankOperation);
 			
 		long getUDPPort();
 		string getUDPHost();
