@@ -21,9 +21,9 @@ module common
 		boolean createAccount(in string firstName, in string lastName, in string address, in string phone, in string customerID, in BranchID branchID) raises (invalid_client);
 		boolean editRecord(in string customerID, in EditRecordFields fieldName, in string newValue) raises (invalid_client);
 		
-		void deposit(in string customerID, in float amount) raises (invalid_client, invalid_bankOperation);
-		void withdraw(in string customerID, in float amount) raises (invalid_client, invalid_bankOperation);
-		void getBalance(in string customerID) raises (invalid_client);
+		void deposit(in string customerID, in double amount) raises (invalid_client, invalid_bankOperation);
+		void withdraw(in string customerID, in double amount) raises (invalid_client, invalid_bankOperation);
+		double getBalance(in string customerID) raises (invalid_client);
 		boolean transferFund(in string sourceID, in float amount, in string destID) raises (invalid_client, invalid_bankOperation);
 			
 		long getUDPPort();

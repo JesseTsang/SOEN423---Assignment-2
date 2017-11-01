@@ -174,36 +174,194 @@ public class BankServerImpl extends BankServerInterfacePOA
 	}
 
 	@Override
-	public boolean editRecord(String customerID, common.EditRecordFields fieldName, String newValue)
+	public boolean editRecord(String customerID, common.EditRecordFields newField, String newValue)
 	        throws invalid_client
 	{
-		// TODO Auto-generated method stub
+		EditRecordFields fieldName = EditRecordFields.valueOf(newField.toString());
+		
+		//1. Check if such client exist.
+		String key = Character.toString((char)customerID.charAt(CLIENT_NAME_INI_POS));
+		ArrayList<Client> values = clientList.get(key);
+				
+		for (Client client: values)
+		{
+			//1.1 Client Found
+			if (client.getCustomerID().equals(customerID))
+			{
+				switch(fieldName)
+				{
+					case address:
+						client.setAddress(newValue);
+						this.logger.info("Server Log: | Edit Record Log: Address Record Modified Successful | Customer ID: " + client.getCustomerID());
+						break;
+						
+					case phone:
+						try
+						{
+							if(client.verifyPhoneNumber(newValue))
+							{
+								client.setPhoneNumber(newValue);
+								this.logger.info("Server Log: | Edit Record Log: Phone Record Modified Successful | Customer ID: " + client.getCustomerID());
+								break;
+							}
+						}
+						catch (Exception e)
+						{
+							this.logger.severe("Server Log: | Edit Record Error: Invalid Phone Format | Customer ID: " + client.getCustomerID());
+							e.printStackTrace();
+							break;
+						}
+						
+					case branch:
+						try
+						{
+							for(BranchID enumName : BranchID.values())
+							{
+								if(enumName.name().equalsIgnoreCase(newValue))
+								{
+									client.setBranchID(enumName);
+									this.logger.info("Server Log: | Edit Record Log: Branch ID Modified Successful | Customer ID: " + client.getCustomerID());
+									break;
+								}
+								else
+								{
+									this.logger.severe("Server Log: | Edit Record Error: Invalid Branch ID | Customer ID: " + client.getCustomerID());
+									break;
+								}
+							}
+						}
+						catch (Exception e)
+						{
+							this.logger.severe("Server Log: | Edit Record Error: Unknow Branch Error | Customer ID: " + client.getCustomerID());
+							break;
+						}					
+				}//end switch statements
+			}//end if clause (customer found)
+			else
+			{
+				this.logger.severe("Server Log: | Record Edit Error: Account Not Found | Customer ID: " + customerID);
+				throw new invalid_client ("Server Log: | Edit Record Error: Account Not Found | Customer ID: " + customerID);
+			}
+		}
+		
 		return false;
 	}
 
 	@Override
-	public void deposit(String customerID, float amount) throws invalid_client, invalid_bankOperation
+	public synchronized void deposit(String customerID, double amount) throws invalid_client, invalid_bankOperation
 	{
-		// TODO Auto-generated method stub
+		if (amount <= 0)
+		{
+			this.logger.info("Server Log: | Deposit Error: Attempted to deposit incorrect amount. | Amount: " + amount + " | Customer ID: " + customerID);
+			throw new invalid_bankOperation ("Server Log: | Deposit Error: Attempted to deposit incorrect amount. | Amount: " + amount + " | Customer ID: " + customerID);
+		}
+		
+		//1. Verify the customerID is valid.
+		try
+		{
+			//Maybe move the verification process to a separate method
+			String key = Character.toString((char)customerID.charAt(CLIENT_NAME_INI_POS));
+			ArrayList<Client> values = clientList.get(key);
+			
+			for (Client client : values)
+			{
+				if (client.getCustomerID().equals(customerID))
+				{
+					client.deposit(amount);
+					double newBalance = client.getBalance();
+					this.logger.info("Server Log: | Deposit Log: | Deposit: " + amount + " | Balance: " + newBalance + " | Customer ID: " + customerID);
+				}
+			}
+		}
+		catch (Exception e)
+		{
+			this.logger.severe("Server Log: | Deposit Error: | Unable to locate account. | Customer ID: " + customerID);
+			throw new invalid_client("Server Log: | Deposit Error: | Unable to locate account. | Customer ID: " + customerID);
+		}
 		
 	}
 
 	@Override
-	public void withdraw(String customerID, float amount) throws invalid_client, invalid_bankOperation
+	public synchronized void withdraw(String customerID, double amount) throws invalid_client, invalid_bankOperation
 	{
-		// TODO Auto-generated method stub
+		if (amount <= 0)
+		{
+			this.logger.info("Server Log: | Withdrawl Error: Attempted to withdraw incorrect amount. | Amount: " + amount + " | Customer ID: " + customerID);
+			throw new invalid_bankOperation ("Server Log: | Withdrawl Error: Attempted to withdraw incorrect amount. | Amount: " + amount + " | Customer ID: " + customerID);
+		}
 		
+		//1. Verify the customerID is valid.
+		try
+		{
+			//Maybe move the verification process to a separate method
+			String key = Character.toString((char)customerID.charAt(CLIENT_NAME_INI_POS));
+			ArrayList<Client> values = clientList.get(key);
+			
+			for (Client client : values)
+			{
+				if (client.getCustomerID().equals(customerID))
+				{
+					double oldBalance = client.getBalance();
+					double newBalance = oldBalance - amount;				
+					
+					if (newBalance < 0 )
+					{
+						this.logger.severe("Server Log: | Withdrawl Error: Attempted to withdraw more than current balance. | Amount: " 
+								+ amount + " | Customer Balance: " + oldBalance + " | Customer ID: " + customerID);
+						
+						throw new invalid_bankOperation("Server Log: | Withdrawl Error: Attempted to withdraw more than current balance. | Amount: " 
+								+ amount + " | Customer Balance: " + oldBalance + " | Customer ID: " + customerID);			
+					}
+					else
+					{
+						client.withdraw(amount);
+						
+						this.logger.info("Server Log: | Withdrawl Log: | Withdrawl: " + amount + " | Balance: " + newBalance + " | Customer ID: " + customerID);					
+					}					
+				}
+			}
+		}
+		catch (Exception e)
+		{
+			this.logger.severe("Server Log: | Deposit Error: | Unable to locate account. | Customer ID: " + customerID);
+			throw new invalid_client("Server Log: | Deposit Error: | Unable to locate account. | Customer ID: " + customerID);
+		}	
 	}
 
 	@Override
-	public void getBalance(String customerID) throws invalid_client
+	public synchronized double getBalance(String customerID) throws invalid_client
 	{
-		// TODO Auto-generated method stub
+		double newBalance = 0;
 		
+		//1. Verify the customerID is valid.
+		try
+		{
+			String key = Character.toString((char)customerID.charAt(CLIENT_NAME_INI_POS));		
+			ArrayList<Client> values = clientList.get(key);
+					
+			for (Client client : values)
+			{
+				if (client.getCustomerID().equals(customerID))
+				{
+					newBalance = client.getBalance();
+							
+					this.logger.info("Server Log: | Balance Log: | Balance: " + newBalance + " | Customer ID: " + customerID);
+					
+					return newBalance;
+				}
+			}
+		}
+		catch (Exception e)
+		{
+			this.logger.severe("Server Log: | Withdrawl Error: | Unable to locate account. | Customer ID: " + customerID);
+			throw new invalid_client("Server Log: | Withdrawl Error: | Unable to locate account. | Customer ID: " + customerID);
+		}
+		
+		return newBalance;
 	}
 
 	@Override
-	public boolean transferFund(String sourceID, float amount, String destID) throws invalid_client, invalid_bankOperation
+	public synchronized boolean transferFund(String sourceID, float amount, String destID) throws invalid_client, invalid_bankOperation
 	{
 		return false;	
 	}
@@ -250,6 +408,4 @@ public class BankServerImpl extends BankServerInterfacePOA
 	{
 		this.orb = orb;
 	}
-	
-	
 }
