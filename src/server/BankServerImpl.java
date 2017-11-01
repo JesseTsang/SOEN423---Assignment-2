@@ -6,6 +6,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
+import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -21,41 +22,48 @@ import common.BankServerInterfacePackage.invalid_client;
 import domain.BranchID;
 import domain.Client;
 import domain.EditRecordFields;
-
-/*
- * To-do:
- * 1. Rewrite duplicate methods, such as verify if an account exist with a customerID.
- */
+import udp.UDPServer;
 
 public class BankServerImpl extends BankServerInterfacePOA 
 {
 	private static final long serialVersionUID = 1L;
 	
 	//Variable for each separate bank server
-	private BranchID branchID;
 	private Logger logger = null;
+	private BranchID branchID;
 	private int clientCount;
+	private Map<String, ArrayList<Client>> clientList = new HashMap<String, ArrayList<Client>>();
 	
 	//CORBA Variables
 	private ORB orb = null;
 	private int UDPPort;
 	private String UDPHost;
 	
+	//UDP Server for listening incoming requests
+	private UDPServer UDPServer;
+	
+	//Holds other servers' addresses
+	HashMap<String, String> serversList = new HashMap();
 	
 	private static final int    CLIENT_NAME_INI_POS = 3;
 
 	//1. Each branch will have its separate server
-	public BankServerImpl(BranchID branchID, int UDPPort)
+	public BankServerImpl(BranchID branchID, ORB orb, String host, int port, HashMap<String, String> serversList)
 	{
-		super();
-		
 		this.branchID = branchID;
 		this.UDPPort = UDPPort;
 		this.clientCount = 0;
 		
+		this.orb = orb;
+		this.UDPHost = host;
+		this.UDPPort = port;
+		this.serversList = serversList;
+		
+		this.UDPServer = new UDPServer(UDPHost, UDPPort, this);
+		
 		//1.1 Logging Initiation
 		this.logger = this.initiateLogger();
-		this.logger.info("Initializing Server ...");
+		this.logger.info("Server Log: Initializing server ... ");
 				
 		System.out.println("Server: " + branchID + " initialization success.");
 		System.out.println("Server: " + branchID + " port is : " + UDPPort);
@@ -90,7 +98,7 @@ public class BankServerImpl extends BankServerInterfacePOA
 			e.printStackTrace();
 		}
 		
-		System.out.println("Server Log: Logger initialization success.");
+		System.out.println("Server Log: Initialization successed ... " + "Server ID: " + branchID + " | " + "Port : " + UDPPort);
 		
 		return logger;
 	}
@@ -106,8 +114,63 @@ public class BankServerImpl extends BankServerInterfacePOA
 	public boolean createAccount(String firstName, String lastName, String address, String phone, String customerID,
 	        common.BranchID branchID) throws invalid_client
 	{
-		// TODO Auto-generated method stub
-		return false;
+		this.logger.info("Initiating user account creation for " + firstName + " " + lastName);
+		
+		BranchID branchIDNew = BranchID.valueOf(branchID.toString());
+		
+		//If the user IS at the right branch ... we start the operation.
+		if (branchIDNew == this.branchID)
+		{
+			//Each character will be a key, each key will starts with 10 buckets.
+			String key = Character.toString((char)customerID.charAt(CLIENT_NAME_INI_POS));
+			ArrayList<Client> values = new ArrayList<Client>(10);
+			
+			//If a key doesn't exist ... for example no client with last name Z ... then ...
+			if(!clientList.containsKey(key))
+			{
+				//Adds a key and 10 buckets
+				clientList.put(key, values);
+			}
+			
+			//This is to test if the account is already exist.
+			//1. Extract the buckets of the last Name ... for example, we will get all the clients with last name start with Z
+			values = clientList.get(key);
+			
+			//2. After extracted the buckets, we loops to check if the customerID is already exist.
+			for (Client client: values)
+			{
+				if (client.getCustomerID().equals(customerID))
+				{
+					this.logger.severe("Server Log: | Account Creation Error: Account Already Exists | Customer ID: " + customerID);
+					throw new invalid_client ("Server Error: | Account Creation Error: Account Already Exists | Customer ID: " + customerID);
+				}
+			}
+			
+			//3. If no existing account found, then we create a new account.
+			Client newClient;
+			
+			try
+			{
+				newClient = new Client(firstName, lastName, address, phone, customerID, branchIDNew);
+				values.add(newClient);
+				clientList.put(key, values);
+				
+				this.logger.info("Server Log: | Account Creation Successful | Customer ID: " + customerID);
+				this.logger.info(newClient.toString());
+			}
+			catch (Exception e)
+			{
+				this.logger.severe("Server Log: | Account Creation Error. | Customer ID: " + customerID + " | " + e.getMessage());
+				throw new invalid_client(e.getMessage());
+			}	
+		}//end if clause ... if not the same branch
+		else
+		{
+			this.logger.severe("Server Log: | Account Creation Error: BranchID Mismatch | Customer ID: " + customerID);
+			throw new invalid_client("Server Error: | Account Creation Error: BranchID Mismatch | Customer ID: " + customerID);		
+		}
+		
+		return true;
 	}
 
 	@Override
@@ -159,18 +222,18 @@ public class BankServerImpl extends BankServerInterfacePOA
 		return null;
 	}
 
+	//Will destory ORB and stop UDPServer from listening requests.
 	@Override
 	public void shutdown()
 	{
-		// TODO Auto-generated method stub
-		
+		this.orb.shutdown(false);
+		this.UDPServer.stop();		
 	}
 
 	@Override
 	public int getLocalAccountCount()
 	{
-		// TODO Auto-generated method stub
-		return 0;
+		return getClientCount();
 	}
 
 	public BranchID getBranchID()
@@ -181,5 +244,12 @@ public class BankServerImpl extends BankServerInterfacePOA
 	public int getClientCount()
 	{
 		return clientCount;
-	}	
+	}
+
+	public void setOrb(ORB orb)
+	{
+		this.orb = orb;
+	}
+	
+	
 }

@@ -11,6 +11,7 @@ public class UDPServer implements Runnable
 	private String UDPHost;
 	private int UDPPort;
 	private BankServerImpl bankServer;
+	boolean connectionStatus;
 	
 	public UDPServer(String UDPHost, int UDPPort, BankServerImpl bankServer)
 	{
@@ -25,7 +26,7 @@ public class UDPServer implements Runnable
 		
 		byte[] dataBuffer = new byte[1048];
 		
-		while (true)
+		while (connectionStatus == true)
 		{
 			//1. Create a datagram for incoming packets
 			DatagramPacket requestPacket = new DatagramPacket (dataBuffer, dataBuffer.length);
@@ -47,6 +48,11 @@ public class UDPServer implements Runnable
 			serverSocket.send(replyPacket);
 		}
 	}
+	
+	public void stop()
+	{
+		connectionStatus = false;
+	}
 
 	@Override
 	public void run()
@@ -59,9 +65,6 @@ public class UDPServer implements Runnable
 		{
 			System.err.println(e.getMessage());
 			e.printStackTrace();
-		}
-		
-	}
-	
-
+		}	
+	}	
 }
