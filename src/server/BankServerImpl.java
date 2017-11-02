@@ -66,10 +66,10 @@ public class BankServerImpl extends BankServerInterfacePOA
 		
 		//1.1 Logging Initiation
 		this.logger = this.initiateLogger();
-		this.logger.info("Server Log: Initializing server ... ");
+		this.logger.info("Server Log: | BankServerImpl Server Instance Creation | Branch: " + branchID + " | Port : " + UDPPort);
 				
-		System.out.println("Server: " + branchID + " initialization success.");
-		System.out.println("Server: " + branchID + " port is : " + UDPPort);
+		System.out.println("Server Log: | BankServerImpl Server Instance Creation | Initialization Successed.");
+		System.out.println("Server Log: | BankServerImpl Server Instance Creation | Branch: " + branchID + " | Port : " + UDPPort);
 	}	
 
 	private Logger initiateLogger() 
@@ -101,7 +101,8 @@ public class BankServerImpl extends BankServerInterfacePOA
 			e.printStackTrace();
 		}
 		
-		System.out.println("Server Log: Initialization successed ... " + "Server ID: " + branchID + " | " + "Port : " + UDPPort);
+		System.out.println("Server Log: | BankServerImpl Initialization | Logging Initialization Successed.");
+		System.out.println("Server Log: | BankServerImpl Initialization | Server ID: " + branchID.toString() + " | Port : " + UDPPort);
 		
 		return logger;
 	}
