@@ -7,7 +7,6 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 
 import domain.BranchID;
-import server.BankServerInterface;
 
 public class CustomerClient
 {
@@ -31,9 +30,9 @@ public class CustomerClient
 	
 	public synchronized void deposit(double amount) throws AccessException, RemoteException, NotBoundException
 	{
-		BankServerInterface bankServer = (BankServerInterface)registry.lookup(this.branchID.toString());
+		/*BankServerInterface bankServer = (BankServerInterface)registry.lookup(this.branchID.toString());
 		
-		bankServer.deposit(this.customerID, amount);
+		bankServer.deposit(this.customerID, amount);*/
 		//double balance = bankServer.getBalance(this.customerID);
 		
 		//System.out.println("Deposit Successful. | Customer ID: " + this.customerID + " | Deposit Amount: " + amount + " | Account Balance: " + balance);		
@@ -41,9 +40,9 @@ public class CustomerClient
 	
 	public synchronized void withdraw(double amount) throws AccessException, RemoteException, NotBoundException
 	{
-		BankServerInterface bankServer = (BankServerInterface)registry.lookup(this.branchID.toString());
+		/*BankServerInterface bankServer = (BankServerInterface)registry.lookup(this.branchID.toString());
 		
-		bankServer.withdraw(this.customerID, amount);
+		bankServer.withdraw(this.customerID, amount);*/
 		//double balance = bankServer.getBalance(this.customerID);
 		
 		//System.out.println("Withdrawal Successful. | Customer ID: " + this.customerID + " | Withdraw Amount: " + amount + " | Account Balance: " + balance);		
@@ -51,11 +50,11 @@ public class CustomerClient
 	
 	public synchronized void getBalance() throws AccessException, RemoteException, NotBoundException
 	{
-		BankServerInterface bankServer = (BankServerInterface)registry.lookup(this.branchID.toString());
+		/*BankServerInterface bankServer = (BankServerInterface)registry.lookup(this.branchID.toString());
 		
 		double balance = bankServer.getBalance(this.customerID);
 		
-		System.out.println("Operation Sucessed. | Customer ID: " + this.customerID + " | Account Balance: " + balance);		
+		System.out.println("Operation Sucessed. | Customer ID: " + this.customerID + " | Account Balance: " + balance);		*/
 	}
 
 	public static void main(String[] args)

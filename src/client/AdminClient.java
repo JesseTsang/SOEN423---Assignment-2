@@ -9,7 +9,7 @@ import java.util.HashMap;
 
 import domain.BranchID;
 import domain.EditRecordFields;
-import server.BankServerInterface;
+
 
 public class AdminClient
 {
@@ -41,8 +41,8 @@ public class AdminClient
 	public synchronized void createAccountRecord(String firstName, String lastName, String address, String phone, String customerID, BranchID branch) 
 			throws AccessException, RemoteException, NotBoundException
 	{	
-		BankServerInterface bankServer = (BankServerInterface) registry.lookup(this.branchID.toString());
-		boolean result = bankServer.createAccount(firstName, lastName, address, phone, customerID, this.branchID);
+		//BankServerInterface bankServer = (BankServerInterface) registry.lookup(this.branchID.toString());
+		/*boolean result = bankServer.createAccount(firstName, lastName, address, phone, customerID, this.branchID);
 		
 		if(result)
 		{
@@ -51,29 +51,29 @@ public class AdminClient
 		else
 		{
 			System.out.println("Account Creation Error: Account Unable to Create. Please consult server log.");
-		}
+		}*/
 	}
 	
 	public synchronized void editRecord(String customerID, EditRecordFields fieldName, String newValue) throws AccessException, RemoteException, NotBoundException
 	{
-		BankServerInterface bankServer = (BankServerInterface) registry.lookup(this.branchID.toString());
-		boolean result = bankServer.editRecord(customerID, fieldName, newValue);
+		//BankServerInterface bankServer = (BankServerInterface) registry.lookup(this.branchID.toString());
+		//boolean result = bankServer.editRecord(customerID, fieldName, newValue);
 		
-		if(result)
+		/*if(result)
 		{
 			System.out.println("Account Successfully Modified. | Customer ID: " + customerID);
 		}
 		else
 		{
 			System.out.println("Account Edit Error: Account Unable to Modify. Please consult server log.");
-		}
+		}*/
 	}
 	
 	public synchronized HashMap<String, String> getAccountCount() throws AccessException, RemoteException, NotBoundException
 	{
-		BankServerInterface bankServer = (BankServerInterface) registry.lookup(this.branchID.toString());
-		HashMap<String, String> result = bankServer.getAccountCount();
-		return result;
+		//BankServerInterface bankServer = (BankServerInterface) registry.lookup(this.branchID.toString());
+		//HashMap<String, String> result = bankServer.getAccountCount();
+		return null;
 	}
 	
 	/*public synchronized void deposit(double amount) throws AccessException, RemoteException, NotBoundException
