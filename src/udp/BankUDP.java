@@ -23,6 +23,8 @@ public class BankUDP implements BankUDPInterface
 	private String clientIDSource;
 	private String clientIDDest;
 	private float amount;
+	
+
 	private String operationType;
 	private boolean transferStatus = false;
 	private int totalClientsCount;
@@ -41,6 +43,16 @@ public class BankUDP implements BankUDPInterface
 	public BankUDP()
 	{
 		this.operationType = "getTotalClients";
+	}
+	
+	public boolean isTransferStatus()
+	{
+		return transferStatus;
+	}
+
+	public int getTotalClientsCount()
+	{
+		return totalClientsCount;
 	}
 		
 	@Override

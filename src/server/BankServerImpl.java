@@ -22,6 +22,9 @@ import common.BankServerInterfacePackage.invalid_client;
 import domain.BranchID;
 import domain.Client;
 import domain.EditRecordFields;
+import udp.BankUDP;
+import udp.BankUDPInterface;
+import udp.UDPClient;
 import udp.UDPServer;
 
 public class BankServerImpl extends BankServerInterfacePOA 
@@ -42,7 +45,7 @@ public class BankServerImpl extends BankServerInterfacePOA
 	//UDP Server for listening incoming requests
 	private UDPServer UDPServer;
 	
-	//Holds other servers' addresses
+	//Holds other servers' addresses : ["ServerName", "hostName:portNumber"]
 	HashMap<String, String> serversList = new HashMap();
 	
 	private static final int    CLIENT_NAME_INI_POS = 3;
@@ -248,7 +251,7 @@ public class BankServerImpl extends BankServerInterfacePOA
 	}
 
 	@Override
-	public synchronized void deposit(String customerID, double amount) throws invalid_client, invalid_bankOperation
+	public synchronized boolean deposit(String customerID, double amount) throws invalid_client, invalid_bankOperation
 	{
 		if (amount <= 0)
 		{
@@ -270,6 +273,8 @@ public class BankServerImpl extends BankServerInterfacePOA
 					client.deposit(amount);
 					double newBalance = client.getBalance();
 					this.logger.info("Server Log: | Deposit Log: | Deposit: " + amount + " | Balance: " + newBalance + " | Customer ID: " + customerID);
+					
+					return true;
 				}
 			}
 		}
@@ -279,10 +284,11 @@ public class BankServerImpl extends BankServerInterfacePOA
 			throw new invalid_client("Server Log: | Deposit Error: | Unable to locate account. | Customer ID: " + customerID);
 		}
 		
+		return false;		
 	}
 
 	@Override
-	public synchronized void withdraw(String customerID, double amount) throws invalid_client, invalid_bankOperation
+	public synchronized boolean withdraw(String customerID, double amount) throws invalid_client, invalid_bankOperation
 	{
 		if (amount <= 0)
 		{
@@ -316,7 +322,9 @@ public class BankServerImpl extends BankServerInterfacePOA
 					{
 						client.withdraw(amount);
 						
-						this.logger.info("Server Log: | Withdrawl Log: | Withdrawl: " + amount + " | Balance: " + newBalance + " | Customer ID: " + customerID);					
+						this.logger.info("Server Log: | Withdrawl Log: | Withdrawl: " + amount + " | Balance: " + newBalance + " | Customer ID: " + customerID);
+						
+						return true;
 					}					
 				}
 			}
@@ -325,7 +333,9 @@ public class BankServerImpl extends BankServerInterfacePOA
 		{
 			this.logger.severe("Server Log: | Deposit Error: | Unable to locate account. | Customer ID: " + customerID);
 			throw new invalid_client("Server Log: | Deposit Error: | Unable to locate account. | Customer ID: " + customerID);
-		}	
+		}
+		
+		return false;
 	}
 
 	@Override
@@ -360,24 +370,133 @@ public class BankServerImpl extends BankServerInterfacePOA
 		return newBalance;
 	}
 
+	//Account Format: QCMA1234
+	//Account Format: [Branch ID][AccountType][Last Name 1st Letter][4 Digits]
 	@Override
 	public synchronized boolean transferFund(String sourceID, float amount, String destID) throws invalid_client, invalid_bankOperation
 	{
+		String sourceBranchID = sourceID.substring(0, 2);
+		String destBranchID = destID.substring(0, 2);
+		
+		boolean isSourceLocal = sourceBranchID.equals(branchID.toString());
+		boolean isDestLocal = destBranchID.equals(branchID.toString());
+		
+		boolean isTransferStatus = false;
+		
+		try
+		{
+			//1. If this is a local-local transfer
+			if(isSourceLocal == isDestLocal)
+			{
+				if(withdraw(sourceID, amount) == true)
+				{
+					if(deposit(destID, amount) == true)
+					{
+						this.logger.info("Server Log: | Transfer Fund Log: | Fund Transfer Successfully | Source Client ID: " + sourceID 
+						 		                  + " | Destination Client ID: " + destID + " | Amount: $" + amount);
+						
+						return true;						
+					}
+					else
+					{
+						//We can't deposit for some reason. Deposit back the amount to source.
+						deposit(sourceID, amount);
+						
+						return false;
+					}
+				}						
+			}
+			//2. If this is a local-foreign transfer
+			else if(isSourceLocal == true && isDestLocal == false)
+			{
+				//2.1 Make sure the local client has enough fund.
+				if(withdraw(sourceID, amount) == true)
+				{
+					//3. Loop through the serversList to find the information of the remote server
+					for(String remoteBranchID : serversList.keySet())
+					{											
+						if(destBranchID.equals(remoteBranchID))
+						{
+							this.logger.info("Server Log: | Transfer Fund Log: | Connection Initialized.");
+							
+							//3.1 Extract the key that is associated with the destination branch.
+							String connectionData = serversList.get(destBranchID);
+							
+							//3.2 Extract the host and IP [host:IP]
+							String hostDest = connectionData.split(":")[0];
+							int portDest = Integer.parseInt(connectionData.split(":")[1]);
+							
+							//3.3 Create an UDPClient and prepare the request.
+							UDPClient requestClient = new UDPClient(hostDest, portDest, branchID);
+							
+							BankUDPInterface transferReq = new BankUDP(sourceID, destID, amount);
+							requestClient.send(transferReq);
+							
+							//3.4 Receive the response.
+							BankUDPInterface transferResp = requestClient.getResponse();
+							
+							//3.5 IF successfully transfer ...
+							if(((BankUDP)transferResp).isTransferStatus() == true)
+							{
+								this.logger.info("Server Log: | Transfer Fund Log: | Fund Transfer Successfully | Source Client ID: " + sourceID 
+				 		                  + " | Destination Client ID: " + destID + " | Amount: $" + amount);
+								
+								isTransferStatus = true;
+								
+								return true;
+							}
+						}	
+					}//end for-loop:remoteBranchID
+					
+					if (isTransferStatus == false)
+					{
+						deposit(sourceID, amount);
+						
+						return false;
+					}
+				}	
+			}//ends local-dest
+			else if(isSourceLocal == false && isDestLocal == true)
+			{
+				//This is the case for incoming transfer.
+				isTransferStatus = deposit(destID, amount);
+				
+				//If we can successfully deposit ...
+				if(isTransferStatus == true)
+				{
+					this.logger.info("Server Log: | Transfer Fund Log: | Fund Transfer Successfully | Source Client ID: " + sourceID 
+			                  + " | Destination Client ID: " + destID + " | Amount: $" + amount);
+					
+					return true;		
+				}
+				else
+				{
+					return false;
+				}					
+			}	
+		}//end try-clause
+		catch (invalid_client e)
+		{
+			this.logger.severe("Server Log: | Fund Transfer Error: | Invalid Client : " + e.getMessage());
+		}
+		catch (invalid_bankOperation e)
+		{
+			this.logger.severe("Server Log: | Fund Transfer Error: | Invalid Bank Operation : " + e.getMessage());
+		}
+			
 		return false;	
 	}
 
 	@Override
 	public int getUDPPort()
 	{
-		// TODO Auto-generated method stub
-		return 0;
+		return UDPPort;
 	}
 
 	@Override
 	public String getUDPHost()
 	{
-		// TODO Auto-generated method stub
-		return null;
+		return UDPHost;
 	}
 
 	//Will destory ORB and stop UDPServer from listening requests.
