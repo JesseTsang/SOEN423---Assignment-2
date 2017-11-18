@@ -61,8 +61,7 @@ public class UDPClient
 			System.err.println("Server Log: | UDPClient Log Initialization Failed | Error: IO Exception " + e);
 			e.printStackTrace();
 		}
-		
-		
+			
 		System.out.println("Server Log: | UDPClient Log Initialization | Logger initialization success.");
 		
 		return logger;
@@ -72,7 +71,6 @@ public class UDPClient
 	{
 		//1. Make sure the old request is cleared.
 		request = null;
-		
 		
 		try
 		{
